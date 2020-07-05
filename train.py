@@ -9,7 +9,7 @@ from torch.utils.tensorboard import SummaryWriter
 from torchvision.datasets import FashionMNIST, CIFAR10
 from torchvision import transforms
 
-from model import MLP_ONI
+from model import MLP_ONI, VGG_ONI_Cifer10, VGG16_ONI
 
 
 def plot_eigenvalues(model, layer_idx):
@@ -49,20 +49,31 @@ def main(args):
 
     # dataset & model
     dataset_dir = "~/downloads/datasets/"
-    transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize((0.2861,), (0.1246,))
-    ])
+
     if args.dataset == "fmnist":
+        transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.2861,), (0.1246,))
+        ])
         train_data = FashionMNIST(dataset_dir, train=True,
                                   download=True, transform=transform)
         test_data = FashionMNIST(dataset_dir, train=False,
                                  download=True, transform=transform)
         model = MLP_ONI(28*28, 10, depth=args.depth, oni_itr=args.oni_itr,
                         orthinit=orthinit, scaling=scaling).to(device)
+        optimizer = optim.SGD(model.parameters(), lr=args.lr)
     elif args.dataset == "cifar10":
-        train_data = CIFAR10(dataset_dir, train=True)
-        test_data = CIFAR10(dataset_dir, train=False)
+        transform = transforms.Compose([
+            transforms.ToTensor(),
+        ])
+        train_data = CIFAR10(dataset_dir, train=True,
+                             download=True, transform=transform)
+        test_data = CIFAR10(dataset_dir, train=False,
+                            download=True, transform=transform)
+        model = VGG_ONI_Cifer10(
+            args.k, args.g, args.oni_itr, orthinit=orthinit).to(device)
+        optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9)
+        scheduler = optim.lr_scheduler.MultiStepLR(optimizer, [80, 120], 0.2)
     elif args.dataset == "imgnet":
         pass
 
@@ -73,7 +84,6 @@ def main(args):
     train_loader = torch.utils.data.DataLoader(train_data, **kwargs)
     test_loader = torch.utils.data.DataLoader(test_data, **kwargs)
 
-    optimizer = optim.SGD(model.parameters(), lr=args.lr)
     for epoch in tqdm(range(args.epochs), total=args.epochs):
         # train
         model.train()
@@ -123,19 +133,25 @@ def main(args):
         # of the weight matrix of 5th layer
         if torch.isnan(loss):
             break
-        log_writer.add_figure("eigen values of 5th layer", plot_eigenvalues(
-            model, args.plot_layer), global_step)
+        if isinstance(model, MLP_ONI):
+            log_writer.add_figure("eigen values of 5th layer", plot_eigenvalues(
+                model, args.plot_layer), global_step)
+
+        if scheduler is not None:
+            scheduler.step()
     log_writer.close()
 
 
 if __name__ == '__main__':
     # Training settings
     parser = argparse.ArgumentParser()
-    parser.add_argument('--batch-size', type=int, default=256)
+    parser.add_argument('--batch_size', type=int, default=256)
     parser.add_argument('--epochs', type=int, default=80)
     parser.add_argument('--lr', type=float, default=1.0)
     parser.add_argument('--oni_itr', type=int, default=5)
     parser.add_argument('--depth', type=int, default=10)
+    parser.add_argument('--k', type=int, default=2)
+    parser.add_argument('--g', type=int, default=3)
     parser.add_argument('--plot_layer', type=int, default=4)
     parser.add_argument('--dataset', type=str, default="fmnist")
     parser.add_argument('--prefix', type=str, default=None)
