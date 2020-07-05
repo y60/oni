@@ -1,5 +1,5 @@
 # oni
-Unofficial implementation of ONI (Controllable Orthogonalization in Training DNNs. Lei Huang, Li Liu, Fan Zhu, Diwen Wan, Zehuan Yuan, Bo Li, Ling Shao. CVPR 2020)
+Unofficial and imperfect implementation of ONI (Controllable Orthogonalization in Training DNNs. Lei Huang, Li Liu, Fan Zhu, Diwen Wan, Zehuan Yuan, Bo Li, Ling Shao. CVPR 2020)
 
 I strongly recommend going to [the official repositry](https://github.com/huangleiBuaa/ONI).
 
