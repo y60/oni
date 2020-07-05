@@ -49,7 +49,7 @@ class Linear_ONI(nn.Module):
             if self.scaling:
                 weight *= np.sqrt(2)
         else:
-            self.weight = self.z 
+            self.weight = self.z
             weight = self.weight
         x = F.linear(x, weight, self.bias)
         return x
